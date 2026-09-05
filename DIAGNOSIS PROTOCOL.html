@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PharmaChamps — Diagnosis Protocol</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-void: #0d0e1c;
+    --panel: #16213e;
+    --panel-edge: #0a0f24;
+    --mint: #06d6a0;
+    --mint-dim: #04a37a;
+    --amber: #ffd166;
+    --alert: #ef476f;
+    --sky: #4cc9f0;
+    --text: #eef2f7;
+    --text-dim: #8b93b5;
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{
+    margin:0; padding:0; min-height:100%;
+    background: var(--bg-void);
+    font-family:'Space Mono', monospace;
+    color: var(--text);
+    display:flex; align-items:flex-start; justify-content:center;
+  }
+
+  .console{
+    position:relative;
+    width:100%; max-width:640px;
+    margin:24px;
+    background: var(--panel);
+    border:4px solid var(--panel-edge);
+    box-shadow: 0 0 0 4px #2a3357, 0 20px 60px rgba(0,0,0,0.6);
+    overflow:hidden;
+  }
+
+  .console::after{
+    content:"";
+    position:absolute; inset:0;
+    background: repeating-linear-gradient(to bottom, rgba(0,0,0,0) 0px, rgba(0,0,0,0) 2px, rgba(0,0,0,0.12) 3px, rgba(0,0,0,0.12) 4px);
+    pointer-events:none; z-index:5;
+  }
+
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:10px 14px;
+    background: var(--panel-edge);
+    border-bottom:3px solid #2a3357;
+    flex-wrap:wrap; gap:6px;
+  }
+  .brand{ font-family:'Press Start 2P', monospace; font-size:10px; color:var(--mint); }
+  .room-tag{
+    font-family:'Press Start 2P', monospace; font-size:8px; color:var(--amber);
+    background:rgba(255,209,102,0.08); border:1px solid var(--amber); padding:4px 6px;
+  }
+
+  .sim-note{
+    font-size:9.5px; color:var(--text-dim);
+    padding:8px 14px;
+    background:#0f1730;
+    border-bottom:3px solid #2a3357;
+    line-height:1.6;
+  }
+  .sim-note b{ color:var(--sky); }
+
+  .role-tabs{
+    display:grid; grid-template-columns:repeat(4,1fr);
+    border-bottom:3px solid #2a3357;
+  }
+  .role-tab{
+    padding:10px 6px;
+    background:#0f1730;
+    border:none; border-right:2px solid #2a3357;
+    color:var(--text-dim);
+    font-family:'Space Mono', monospace;
+    cursor:pointer;
+    display:flex; flex-direction:column; align-items:center; gap:4px;
+    position:relative;
+  }
+  .role-tab:last-child{ border-right:none; }
+  .role-tab .avatar{
+    width:26px; height:26px;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Press Start 2P', monospace; font-size:10px;
+    border:2px solid #2a3357;
+    background:#16213e;
+  }
+  .role-tab .lbl{ font-size:9px; line-height:1.4; text-align:center; }
+  .role-tab.active{ background:#16213e; color:var(--text); }
+  .role-tab.active .avatar{ border-color: var(--role-color, var(--mint)); color:var(--role-color, var(--mint)); }
+  .role-tab .dot{
+    position:absolute; top:6px; right:10px;
+    width:7px; height:7px; background:var(--alert);
+    display:none;
+  }
+  .role-tab.shared .dot{ display:none; }
+  .role-tab.pending .dot{ display:block; }
+
+  .stage{ padding:16px; min-height:420px; }
+
+  .role-header{
+    display:flex; align-items:center; gap:10px;
+    margin-bottom:12px;
+  }
+  .role-header .avatar-lg{
+    width:36px; height:36px;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Press Start 2P', monospace; font-size:13px;
+    border:2px solid var(--role-color);
+    color:var(--role-color);
+    background:#0f1730;
+    flex-shrink:0;
+  }
+  .role-header .role-title{ font-family:'Press Start 2P', monospace; font-size:11px; color:var(--text); line-height:1.6; }
+  .role-header .role-sub{ font-size:10px; color:var(--text-dim); margin-top:2px; }
+
+  .clue-card{
+    background:#0f1730;
+    border:2px solid var(--role-color, #2a3357);
+    padding:14px;
+    margin-bottom:14px;
+    position:relative;
+  }
+  .clue-card::before{
+    content: "HANYA KAMU YANG LIHAT INI";
+    position:absolute; top:-11px; left:10px;
+    font-family:'Press Start 2P', monospace; font-size:7px;
+    background: var(--role-color, var(--mint));
+    color:#06251c;
+    padding:3px 6px;
+  }
+  .clue-body{ font-size:12.5px; line-height:1.8; color:var(--text); }
+  .clue-body b{ color:var(--amber); }
+  .clue-body .cctv-box{
+    margin-top:10px; padding:8px 10px;
+    background:#000; border:2px dashed var(--alert);
+    font-size:11px; color:#ff9fb4;
+  }
+  .clue-body .cctv-box b{ color:var(--alert); }
+
+  .share-btn{
+    width:100%;
+    font-family:'Press Start 2P', monospace; font-size:9.5px;
+    background: var(--role-color, var(--mint));
+    color:#06251c;
+    border:none; padding:11px; cursor:pointer;
+    margin-bottom:18px;
+  }
+  .share-btn:disabled{ background:#2a3357; color:var(--text-dim); cursor:default; }
+
+  .board{
+    background:#0a0f24;
+    border:2px solid #2a3357;
+    padding:12px;
+    margin-bottom:14px;
+  }
+  .board-title{
+    font-family:'Press Start 2P', monospace; font-size:9px; color:var(--sky);
+    margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;
+  }
+  .board-grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .board-slot{
+    border:2px dashed #2a3357;
+    padding:8px;
+    font-size:10px; color:var(--text-dim);
+    min-height:64px;
+    display:flex; flex-direction:column; gap:4px;
+  }
+  .board-slot.filled{
+    border-style:solid;
+    border-color: var(--slot-color, var(--mint));
+    background: rgba(255,255,255,0.02);
+    color: var(--text);
+  }
+  .board-slot .slot-lbl{ font-size:8px; color:var(--slot-color, var(--text-dim)); font-family:'Press Start 2P', monospace; }
+
+  .final-panel{
+    border-top:3px solid #2a3357;
+    padding-top:14px;
+  }
+  .final-panel.locked{ opacity:0.4; pointer-events:none; }
+  .final-title{ font-family:'Press Start 2P', monospace; font-size:11px; color:var(--text); margin-bottom:8px; line-height:1.6; }
+  .final-sub{ font-size:10.5px; color:var(--text-dim); margin-bottom:12px; line-height:1.7; }
+  .final-opts{ display:flex; flex-direction:column; gap:8px; }
+  .fopt-btn{
+    text-align:left;
+    background:#1f2745; border:2px solid #34406e; color:var(--text);
+    font-family:'Space Mono', monospace; font-size:12px;
+    padding:11px; cursor:pointer;
+    display:flex; gap:10px;
+  }
+  .fopt-btn .key{ font-family:'Press Start 2P', monospace; font-size:9px; color:var(--sky); flex-shrink:0; }
+  .fopt-btn:hover:not(:disabled){ background:#26305a; }
+  .fopt-btn:disabled{ opacity:0.6; }
+  .fopt-btn.correct{ background:rgba(6,214,160,0.18); border-color:var(--mint); opacity:1; }
+  .fopt-btn.wrong{ background:rgba(239,71,111,0.18); border-color:var(--alert); opacity:1; }
+
+  .team-feedback{
+    margin-top:14px; padding:12px; font-size:11.5px; line-height:1.8;
+    border-left:3px solid var(--mint); background:rgba(6,214,160,0.06); display:none;
+  }
+  .team-feedback.show{ display:block; }
+  .team-feedback.wrong{ border-left-color:var(--alert); background:rgba(239,71,111,0.06); }
+  .team-feedback .verdict{ font-family:'Press Start 2P', monospace; font-size:10px; display:block; margin-bottom:8px; }
+
+  footer.note{
+    font-size:9.5px; color:var(--text-dim); text-align:center; padding:10px;
+    border-top:3px solid #2a3357; background:var(--panel-edge);
+  }
+</style>
+</head>
+<body>
+
+<div class="console">
+  <div class="topbar">
+    <div class="brand">PHARMACHAMPS <span style="color:var(--sky)">· DIAGNOSIS PROTOCOL</span></div>
+    <div class="room-tag" id="roomTag">ROOM: FARM-4821 · 4/4</div>
+  </div>
+
+  <div class="sim-note">
+    Ini simulasi 1 layar untuk 4 peran. Di game asli, tiap kotak "GANTI PERAN" mewakili <b>HP pemain lain</b> yang tergabung lewat room code — masing-masing hanya melihat kartu clue miliknya sendiri.
+  </div>
+
+  <div class="role-tabs" id="roleTabs"></div>
+
+  <div class="stage">
+    <div class="role-header">
+      <div class="avatar-lg" id="roleAvatar" style="--role-color:#06d6a0">1</div>
+      <div>
+        <div class="role-title" id="roleTitle">PEMAIN 1 — DATA LAB</div>
+        <div class="role-sub" id="roleSub">Kamu memegang hasil pemeriksaan laboratorium pasien.</div>
+      </div>
+    </div>
+
+    <div class="clue-card" id="clueCard" style="--role-color:#06d6a0">
+      <div class="clue-body" id="clueBody"></div>
+    </div>
+
+    <button class="share-btn" id="shareBtn" style="--role-color:#06d6a0">BAGIKAN KE TIM</button>
+
+    <div class="board">
+      <div class="board-title">
+        <span>PAPAN TIM — KASUS: PAK MADE, 52 TH</span>
+        <span id="boardCount">0/4</span>
+      </div>
+      <div class="board-grid" id="boardGrid"></div>
+    </div>
+
+    <div class="final-panel locked" id="finalPanel">
+      <div class="final-title">DIAGNOSIS &amp; TERAPI TIM</div>
+      <div class="final-sub">Setelah 4 potongan data terkumpul di papan tim, diskusikan lewat suara/chat lalu <b>siapa saja</b> boleh mengirim jawaban final untuk tim. Obat antidiabetes oral manakah yang paling aman untuk Pak Made?</div>
+      <div class="final-opts" id="finalOpts"></div>
+      <div class="team-feedback" id="teamFeedback">
+        <span class="verdict" id="teamVerdict"></span>
+        <span id="teamExplanation"></span>
+      </div>
+    </div>
+  </div>
+
+  <footer class="note">prototype konsep multiplayer · v0.1 · sinkronisasi asli akan pakai backend room (mis. Firebase/Photon)</footer>
+</div>
+
+<script>
+const roles = [
+  {
+    id:'lab', num:1, color:'#06d6a0', title:'PEMAIN 1 — DATA LAB',
+    sub:'Kamu memegang hasil pemeriksaan laboratorium pasien.',
+    body: `<b>Hasil Laboratorium — Pak Made (52 th)</b><br><br>
+      • Gula Darah Sewaktu (GDS): <b>280 mg/dL</b><br>
+      • HbA1c: <b>9,2%</b><br>
+      • Kreatinin: 0,9 mg/dL (normal)<br>
+      • SGOT/SGPT: <b>sedikit meningkat</b> (1,3× batas atas normal)<br><br>
+      Catatan: fungsi ginjal masih dalam batas normal, namun ada tanda gangguan fungsi hati ringan.`,
+    boardLabel: 'DATA LAB',
+    boardSummary: 'GDS 280 · HbA1c 9,2% · SGOT/SGPT sedikit ↑ (fungsi hati ringan terganggu)'
+  },
+  {
+    id:'riwayat', num:2, color:'#ffd166', title:'PEMAIN 2 — RIWAYAT PENYAKIT & ALERGI',
+    sub:'Kamu memegang riwayat medis dan catatan alergi pasien.',
+    body: `<b>Riwayat Medis — Pak Made (52 th)</b><br><br>
+      • Riwayat Hipertensi sejak <b>5 tahun lalu</b>, rutin kontrol<br>
+      • Tidak ada riwayat Diabetes Melitus sebelumnya<br>
+      • <b>Alergi: golongan Sulfonamida</b> (pernah bengkak & gatal setelah minum antibiotik golongan ini)<br><br>
+      Catatan penting: golongan Sulfonilurea (obat diabetes) satu keluarga kimia dengan Sulfonamida — berisiko reaksi silang.`,
+    boardLabel: 'RIWAYAT & ALERGI',
+    boardSummary: 'HT 5 th · Alergi Sulfonamida (risiko reaksi silang ke Sulfonilurea)'
+  },
+  {
+    id:'pola', num:3, color:'#ef476f', title:'PEMAIN 3 — POLA HIDUP & CCTV',
+    sub:'Kamu memegang data pola makan, aktivitas, dan rekaman CCTV pasien.',
+    body: `<b>Pola Hidup — Pak Made (52 th)</b><br><br>
+      • Pola makan tinggi karbohidrat & gorengan, jarang sayur<br>
+      • Jarang berolahraga (kurang dari 1×/minggu)<br>
+      <div class="cctv-box"><b>REKAMAN CCTV minimarket (3 minggu terakhir):</b> Pasien terekam membeli bir kaleng sebanyak <b>3× dalam seminggu</b>, biasanya malam hari.</div>`,
+    boardLabel: 'POLA HIDUP & CCTV',
+    boardSummary: 'Pola makan tinggi karbo · CCTV: rutin beli bir 3×/minggu (berlawanan dengan pengakuan pasien)'
+  },
+  {
+    id:'anamnesis', num:4, color:'#4cc9f0', title:'PEMAIN 4 — ANAMNESIS',
+    sub:'Kamu memegang hasil wawancara langsung dengan pasien.',
+    body: `<b>Hasil Wawancara (Anamnesis) — Pak Made (52 th)</b><br><br>
+      • Keluhan: sering haus, sering kencing di malam hari, badan lemas sejak 2 bulan<br>
+      • Pasien mengaku <b>rutin minum obat hipertensi</b><br>
+      • Saat ditanya konsumsi alkohol, pasien menjawab: <b>"Saya tidak pernah minum alkohol sama sekali."</b><br><br>
+      Catatan: jawaban pasien soal alkohol terdengar meyakinkan — tidak ada tanda ia berbohong dari raut wajah.`,
+    boardLabel: 'ANAMNESIS',
+    boardSummary: 'Poliuria, polidipsia, lemas · Pasien MENYANGKAL konsumsi alkohol'
+  }
+];
+
+let activeRole = 0;
+let shared = { lab:false, riwayat:false, pola:false, anamnesis:false };
+let finalAnswered = false;
+
+const roleTabsEl = document.getElementById('roleTabs');
+roles.forEach((r, idx)=>{
+  const btn = document.createElement('button');
+  btn.className = 'role-tab' + (idx===0 ? ' active' : '');
+  btn.style.setProperty('--role-color', r.color);
+  btn.innerHTML = `<span class="dot"></span><div class="avatar">${r.num}</div><div class="lbl">GANTI<br>PERAN ${r.num}</div>`;
+  btn.addEventListener('click', ()=> switchRole(idx));
+  roleTabsEl.appendChild(btn);
+});
+
+const boardGridEl = document.getElementById('boardGrid');
+roles.forEach(r=>{
+  const slot = document.createElement('div');
+  slot.className = 'board-slot';
+  slot.id = 'slot-' + r.id;
+  slot.style.setProperty('--slot-color', r.color);
+  slot.innerHTML = `<span class="slot-lbl">${r.boardLabel}</span><span>Menunggu dibagikan...</span>`;
+  boardGridEl.appendChild(slot);
+});
+
+function switchRole(idx){
+  activeRole = idx;
+  [...roleTabsEl.children].forEach((tab,i)=> tab.classList.toggle('active', i===idx));
+  renderRole();
+}
+
+function renderRole(){
+  const r = roles[activeRole];
+  document.getElementById('roleAvatar').style.setProperty('--role-color', r.color);
+  document.getElementById('roleAvatar').textContent = r.num;
+  document.getElementById('roleTitle').textContent = r.title;
+  document.getElementById('roleSub').textContent = r.sub;
+  document.getElementById('clueCard').style.setProperty('--role-color', r.color);
+  document.getElementById('clueBody').innerHTML = r.body;
+
+  const shareBtn = document.getElementById('shareBtn');
+  shareBtn.style.setProperty('--role-color', r.color);
+  const alreadyShared = shared[r.id];
+  shareBtn.disabled = alreadyShared;
+  shareBtn.textContent = alreadyShared ? 'SUDAH DIBAGIKAN ✓' : 'BAGIKAN KE TIM';
+}
+
+document.getElementById('shareBtn').addEventListener('click', ()=>{
+  const r = roles[activeRole];
+  if(shared[r.id]) return;
+  shared[r.id] = true;
+  const slot = document.getElementById('slot-' + r.id);
+  slot.classList.add('filled');
+  slot.innerHTML = `<span class="slot-lbl">${r.boardLabel}</span><span>${r.boardSummary}</span>`;
+  renderRole();
+  updateBoardCount();
+});
+
+function updateBoardCount(){
+  const count = Object.values(shared).filter(Boolean).length;
+  document.getElementById('boardCount').textContent = `${count}/4`;
+  document.getElementById('finalPanel').classList.toggle('locked', count < 4);
+}
+
+const finalOptions = [
+  { text:'Metformin', correct:false },
+  { text:'Glibenklamid (golongan Sulfonilurea)', correct:false },
+  { text:'Sitagliptin (golongan DPP-4 inhibitor)', correct:true },
+  { text:'Insulin sebagai satu-satunya pilihan', correct:false },
+];
+
+const finalOptsEl = document.getElementById('finalOpts');
+const keys = ['A','B','C','D'];
+finalOptions.forEach((opt, idx)=>{
+  const btn = document.createElement('button');
+  btn.className = 'fopt-btn';
+  btn.innerHTML = `<span class="key">${keys[idx]}</span><span>${opt.text}</span>`;
+  btn.addEventListener('click', ()=> handleFinal(btn, opt));
+  finalOptsEl.appendChild(btn);
+});
+
+function handleFinal(btn, opt){
+  if(finalAnswered) return;
+  if(Object.values(shared).filter(Boolean).length < 4) return;
+  finalAnswered = true;
+
+  const allBtns = document.querySelectorAll('.fopt-btn');
+  allBtns.forEach(b=> b.disabled = true);
+
+  if(opt.correct){
+    btn.classList.add('correct');
+  } else {
+    btn.classList.add('wrong');
+    allBtns.forEach(b=>{
+      const label = b.querySelector('span:last-child').textContent;
+      const match = finalOptions.find(o=>o.text===label && o.correct);
+      if(match) b.classList.add('correct');
+    });
+  }
+
+  const fb = document.getElementById('teamFeedback');
+  fb.classList.add('show');
+  fb.classList.toggle('wrong', !opt.correct);
+  document.getElementById('teamVerdict').textContent = opt.correct ? 'TIM BENAR! +200 POIN TIM' : 'KURANG TEPAT';
+  document.getElementById('teamExplanation').textContent =
+    'Metformin berisiko asidosis laktat bila dikombinasi konsumsi alkohol rutin (data CCTV) ditambah fungsi hati yang sedikit terganggu (data Lab). Glibenklamid berisiko reaksi alergi silang karena pasien alergi Sulfonamida (data Riwayat). Sitagliptin (DPP-4 inhibitor) tidak berinteraksi dengan alkohol maupun alergi Sulfonamida, menjadikannya pilihan paling aman — jawaban ini hanya bisa ditemukan dengan menggabungkan SEMUA data dari 4 pemain, karena anamnesis sendiri menyangkal konsumsi alkohol yang justru terbukti dari CCTV.';
+}
+
+renderRole();
+updateBoardCount();
+</script>
+
+</body>
+</html>
